@@ -2,6 +2,12 @@
 
 Alles-in-een mediaspeler (Dravenlock).
 
+## 🎬 Uitlegvideo
+
+[![Uitlegvideo DraveMedia](https://dravenlock.nl/video/DraveMedia.jpg)](https://dravenlock.nl/video/DraveMedia.mp4)
+
+[▶ Bekijk de uitlegvideo](https://dravenlock.nl/video/DraveMedia.mp4) (ongeveer 2 minuten, Nederlands)
+
 *Categorie: Media en creatief · versie 0.29*
 
 ## ⬇️ Downloaden (Windows, geen Python nodig)
