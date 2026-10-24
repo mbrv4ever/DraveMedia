@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DraveMedia</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e0e11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DraveMedia">
+<link rel="apple-touch-icon" href="dm-icon.svg">
+<link rel="icon" type="image/svg+xml" href="dm-icon.svg">
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<style>
+ :root{--bg:#0e0e11;--panel:#15151b;--panel2:#0a0a0c;--silver:#d4d4d4;--accent:#6fa3d6;
+       --plyr-color-main:#6fa3d6;--plyr-audio-controls-background:#15151b;
+       --plyr-audio-control-color:#d4d4d4;--plyr-audio-control-color-hover:#fff;}
+ *{box-sizing:border-box;}
+ html,body{height:100%;}
+ body{background:var(--bg);color:var(--silver);font-family:Segoe UI,Arial,sans-serif;
+      font-size:15px;margin:0;display:flex;flex-direction:column;}
+ .appbar{display:flex;align-items:center;gap:10px;background:var(--panel2);
+         border-bottom:1px solid #20202a;padding:10px 16px;flex:none;flex-wrap:wrap;}
+ .logo{width:30px;height:30px;flex:none;}
+ .brand{color:#fff;font-size:19px;font-weight:bold;margin-right:8px;}
+ .cat{background:#1b1b22;border:1px solid #2a2a31;color:var(--silver);border-radius:8px;
+      padding:8px 14px;font-size:15px;cursor:pointer;}
+ .cat:hover{border-color:var(--accent);}
+ .cat.active{background:#24344a;border-color:var(--accent);color:#fff;font-weight:bold;}
+ .spacer{flex:1;}
+ .toggle{background:#1b1b22;border:1px solid #2a2a31;color:var(--silver);border-radius:8px;
+         padding:8px 12px;font-size:14px;cursor:pointer;}
+ .toggle.on{background:#24344a;border-color:var(--accent);color:#fff;}
+ .playall{background:var(--accent);color:#06121f;border:none;border-radius:8px;
+          padding:9px 16px;font-size:15px;font-weight:bold;cursor:pointer;}
+ .main{flex:1;display:flex;min-height:0;}
+ .side{width:360px;flex:none;display:flex;flex-direction:column;min-height:0;
+       border-right:1px solid #20202a;padding:12px;}
+ #zoek{width:100%;background:var(--panel);color:var(--silver);border:1px solid #2a2a31;
+       border-radius:8px;padding:9px 12px;font-size:15px;margin-bottom:10px;flex:none;}
+ #zoek:focus{outline:2px solid var(--accent);border-color:var(--accent);}
+ .list{overflow:auto;display:flex;flex-direction:column;gap:5px;}
+ .item{display:flex;align-items:center;gap:9px;color:var(--silver);text-decoration:none;
+       background:var(--panel);border:1px solid #20202a;border-radius:8px;padding:9px 11px;
+       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+ .item .ic{flex:none;opacity:.85;}
+ .item:hover,.item:focus{background:#1d2633;border-color:var(--accent);outline:none;}
+ .item.active{background:#24344a;border-color:var(--accent);color:#fff;}
+ .stagewrap{flex:1;display:flex;flex-direction:column;min-width:0;padding:16px;}
+ .nowtitle{color:var(--accent);font-size:16px;font-weight:bold;margin-bottom:12px;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+ .stage{flex:1;display:flex;align-items:center;justify-content:center;
+        background:#000;border:1px solid #20202a;border-radius:12px;overflow:hidden;}
+ .stage .hint{color:#666;font-size:16px;text-align:center;padding:20px;}
+ .media{max-width:100%;max-height:100%;}
+ video.media{width:100%;height:100%;}
+ audio.media{width:90%;}
+ .audiobox{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;}
+ .audiobox .note{font-size:64px;}
+ @media (max-width:760px){
+   .main{flex-direction:column;}
+   .side{width:auto;border-right:none;border-bottom:1px solid #20202a;max-height:42vh;}
+   .stagewrap{min-height:46vh;}
+ }
+</style></head>
+<body>
+<div class="appbar">
+  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="96" height="96" rx="22" fill="#6fa3d6"/>
+    <polygon points="40,30 40,70 72,50" fill="#06121f"/></svg>
+  <span class="brand">DraveMedia</span>
+  <button class="cat active" id="cat-music"  onclick="setCat('music')">🎵 Muziek <small id="c-music"></small></button>
+  <button class="cat"        id="cat-video"  onclick="setCat('video')">🎬 Video <small id="c-video"></small></button>
+  <button class="cat"        id="cat-image"  onclick="setCat('image')">🖼 Afbeeldingen <small id="c-image"></small></button>
+  <span class="spacer"></span>
+  <button class="playall" onclick="playAll()">▶ Speel alles</button>
+  <button class="toggle on" id="t-repeat" onclick="toggleRepeat()">↻ Herhaal alles</button>
+  <button class="toggle" id="t-shuffle" onclick="toggleShuffle()">🔀 Shuffle</button>
+</div>
+<div class="main">
+  <div class="side">
+    <input id="zoek" type="search" placeholder="Zoeken…" autocomplete="off">
+    <div class="list" id="list"></div>
+  </div>
+  <div class="stagewrap">
+    <div class="nowtitle" id="nowtitle">Kies een categorie en druk op ▶ Speel alles</div>
+    <div class="stage" id="stage"><span class="hint">▶ Speelt hier af — als een nummer klaar is, gaat de volgende vanzelf verder.</span></div>
+  </div>
+</div>
+<script>
+ var BASE="";
+ var DATA={music:[],video:[],image:[]};
+ var cat="music", queue=[], pos=-1, shuffle=false, repeatAll=true, imgTimer=null;
+ var listEl=document.getElementById("list"), stage=document.getElementById("stage"),
+     nowt=document.getElementById("nowtitle"), zoek=document.getElementById("zoek");
+ function counts(){
+   document.getElementById("c-music").textContent="("+DATA.music.length+")";
+   document.getElementById("c-video").textContent="("+DATA.video.length+")";
+   document.getElementById("c-image").textContent="("+DATA.image.length+")";
+ }
+ fetch("media.php").then(function(r){return r.json();})
+   .then(function(d){DATA=d; counts(); render();})
+   .catch(function(){ nowt.textContent="Kon de bibliotheek niet laden."; });
+ function setCat(c){
+   cat=c;
+   ["music","video","image"].forEach(function(x){
+     document.getElementById("cat-"+x).classList.toggle("active", x===c);});
+   render();
+ }
+ function render(){
+   var q=zoek.value.toLowerCase(), arr=DATA[cat]||[];
+   listEl.innerHTML="";
+   arr.forEach(function(it, i){
+     if(q && it.name.toLowerCase().indexOf(q)<0) return;
+     var ic = cat==="music"?"🎵":(cat==="video"?"🎬":"🖼");
+     var a=document.createElement("div"); a.className="item"; a.dataset.idx=i;
+     a.innerHTML='<span class="ic">'+ic+'</span> '+escapeHtml(it.name);
+     a.onclick=function(){ queue=DATA[cat].slice(); pos=i; play(pos); };
+     listEl.appendChild(a);
+   });
+ }
+ function escapeHtml(s){return s.replace(/[&<>"]/g,function(c){
+   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+ function highlight(){
+   [].slice.call(listEl.children).forEach(function(el){
+     el.classList.toggle("active", parseInt(el.dataset.idx,10)===pos);});
+ }
+ function play(i){
+   if(imgTimer){clearTimeout(imgTimer); imgTimer=null;}
+   var it=queue[i]; if(!it) return;
+   pos=i; nowt.textContent=it.name; highlight();
+   var url=BASE+it.url; stage.innerHTML="";
+   if(cat==="image"){
+     var im=new Image(); im.src=url; im.className="media"; stage.appendChild(im);
+     imgTimer=setTimeout(next, 6000);  // diavoorstelling: 6s per beeld
+   } else if(cat==="music"){
+     var box=document.createElement("div"); box.className="audiobox";
+     var note=document.createElement("div"); note.className="note"; note.textContent="🎵";
+     var au=document.createElement("audio"); au.src=url; au.controls=true; au.autoplay=true; au.className="media";
+     au.onended=next; box.appendChild(note); box.appendChild(au); stage.appendChild(box);
+     try{ if(window.Plyr){ new Plyr(au); } }catch(e){}
+   } else {
+     var v=document.createElement("video"); v.controls=true; v.autoplay=true; v.className="media";
+     v.onended=next; stage.appendChild(v);
+     if(window._dmHls){ try{window._dmHls.destroy();}catch(e){} window._dmHls=null;}
+     function playDirect(){ v.src=url; try{ if(window.Plyr){ new Plyr(v); } }catch(e){} }
+     // vraag de server hoe dit het best speelt (direct / HLS). Mislukt dat (statische export)
+     // dan vallen we gewoon terug op direct afspelen.
+     fetch("play.json?file="+encodeURIComponent(it.url)).then(function(r){
+       if(!r.ok) throw 0; return r.json();
+     }).then(function(d){
+       if(d.mode==="hls"){
+         var hu=BASE+d.url;
+         if(v.canPlayType("application/vnd.apple.mpegurl")){ v.src=hu; }     // Safari/iOS: native HLS
+         else if(window.Hls && window.Hls.isSupported()){
+           var hls=new Hls(); window._dmHls=hls; hls.loadSource(hu); hls.attachMedia(v);
+         } else { playDirect(); return; }
+         try{ if(window.Plyr){ new Plyr(v); } }catch(e){}
+       } else { url=BASE+d.url; playDirect(); }
+     }).catch(function(){ playDirect(); });
+   }
+ }
+ function next(){
+   if(pos<queue.length-1){ pos++; }
+   else if(repeatAll && queue.length){ pos=0; }
+   else { return; }
+   play(pos);
+ }
+ function playAll(){
+   var arr=(DATA[cat]||[]).slice();
+   if(!arr.length) return;
+   if(shuffle){ for(var k=arr.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=arr[k];arr[k]=arr[j];arr[j]=t;} }
+   queue=arr; pos=-1; next();
+ }
+ function toggleRepeat(){repeatAll=!repeatAll; document.getElementById("t-repeat").classList.toggle("on",repeatAll);}
+ function toggleShuffle(){shuffle=!shuffle; document.getElementById("t-shuffle").classList.toggle("on",shuffle);}
+ zoek.addEventListener("input", render);
+ // PWA: registreer de service worker (cachet de schil; media blijft streamen)
+ if("serviceWorker" in navigator){
+   window.addEventListener("load", function(){
+     navigator.serviceWorker.register("sw.js").catch(function(){});
+   });
+ }
+</script>
+</body></html>
